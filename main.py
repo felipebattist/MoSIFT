@@ -1,3 +1,3 @@
-import sift_functions as sf
+import kmeans_module as km
 
-all_kp, all_dsc = sf.gen_all_sift_features()
+km.clustering_and_ploting()
