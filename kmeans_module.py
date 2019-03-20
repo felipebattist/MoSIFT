@@ -3,10 +3,13 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import numpy as np
 
-data = sm.gen_data_set()
-data_array = np.asarray(data)
+def clustering(data,number_of_clusters):
+    kmeans = KMeans(n_clusters=number_of_clusters).fit(data)
+    return kmeans
 
-def clustering_and_ploting():
-    kmeans = KMeans(n_clusters=10).fit(data)
-    plt.scatter(data_array[:,1], data_array[:,2], s = 5, c = kmeans.labels_)
-    plt.show()
+def gen_feature_vector(points_list, clusters):
+    feature_vector = np.zeros(len(clusters.cluster_centers_))
+    cluster_result =  clusters.predict(points_list)
+    for i in cluster_result:
+        feature_vector[i] += 1.0
+    return feature_vector
