@@ -63,17 +63,15 @@ def gen_video_3d_points(video_name):
     return data
 
 def gen_data_set():
-    listing = os.listdir(r'C:\Users\Arnaldo\Desktop\MoSIFT\train')
+    listing = os.listdir(r'C:\Users\Arnaldo\Desktop\MoSIFT\dict')
     data = []
     count_frame = 0
     
     for video in listing:
-        video = r"C:/Users/Arnaldo/Desktop\MoSIFT/train/"+video
+        video = r"C:/Users/Arnaldo/Desktop\MoSIFT/dict/"+video
         data_video = gen_video_3d_points(video)
         data.extend(data_video)
         
     return data
-
-
 
 
