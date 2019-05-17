@@ -1,4 +1,5 @@
-import cv2
+import cv2 as cv
+import util as ut
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -11,27 +12,27 @@ feature_params = dict( maxCorners = 100,
 
 lk_params = dict( winSize  = (15,15),
                   maxLevel = 2,
-                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+                  criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 10, 0.03))
 
 def capture_frame(video_name, frame_number):
-    cap = cv2.VideoCapture(video_name)
+    cap = cv.VideoCapture(video_name)
     cap.set(1, frame_number)
     ret, frame = cap.read()
     
     return frame
 
 def count_frames(video_name):
-    cap = cv2.VideoCapture(video_name)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap = cv.VideoCapture(video_name)
+    total_frames = int(cap.get(cv.CAP_PROP_FRAME_COUNT))
     
     return total_frames
 
 def to_gray(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     return gray
 
 def gen_sift_features(gray_img):
-    sift = cv2.xfeatures2d.SIFT_create()
+    sift = cv.xfeatures2d.SIFT_create()
     kp, desc = sift.detectAndCompute(gray_img, None)
     
     return kp, desc
@@ -45,7 +46,7 @@ def test_motion(sift_kp, sift_desc, optical_points, frame_2d_points):
         distance_x = frame_2d_points[i].T[0] - optical_points[i].T[0]
         distance_y = frame_2d_points[i].T[1] - optical_points[i].T[1]
         
-        if distance_x >3 or distance_y > 3:
+        if distance_x > 5 or distance_y > 5:
             mosift_kp.append(sift_kp[i])
             mosift_dsc.append(sift_desc[i])
             x = int(frame_2d_points[i].T[0])
@@ -54,15 +55,45 @@ def test_motion(sift_kp, sift_desc, optical_points, frame_2d_points):
             mosift_2d_points.append(info)
             
     return mosift_kp, mosift_dsc, mosift_2d_points
+
+def gen_optical_dsc(x, y, gray_old_frame, gray_frame):
+    descriptor = []
+    neighbors = ut.gen_neighbors(x,y)
+    neighbors = np.array(neighbors)
+    neighbors = np.float32(neighbors[:, np.newaxis, :])
+    optical_dsc = []
             
+    optical_points, st, err = cv.calcOpticalFlowPyrLK(gray_old_frame, gray_frame, neighbors, None, **lk_params)
+    count = 0
+    flag = False
+    teste = 0
+    histogram = [0,0,0,0,0,0,0,0]
+    for i in range(len(optical_points)):
+        dx = optical_points[i].T[0]
+        dy = optical_points[i].T[1]
+        output = np.arctan(dy/dx)
+        histogram = ut.gen_arc_hist(output, histogram)
+        count+=1
+        if count == 16:
+            count = 0
+            flag = True
+            teste+=1
+        if flag == True:
+            optical_dsc+=histogram
+            histogram = [0,0,0,0,0,0,0,0]
+            flag = False
+    return optical_dsc
+    
 
 def gen_mosift_features(video_name):
     number_of_frames = count_frames(video_name)
     all_kp = []
     all_dsc = []
-    all_3d_points = []
+    all_2d_points = []
+    count_dsc = 0
     
     for i in range(number_of_frames-2):
+    
         frame_2d_points = []
         frame = capture_frame(video_name, i+1)
         old_frame = capture_frame(video_name, i)
@@ -77,28 +108,29 @@ def gen_mosift_features(video_name):
         frame_2d_points = np.array(frame_2d_points)
         frame_2d_points = np.float32(frame_2d_points[:, np.newaxis, :])
             
-        optical_points, st, err = cv2.calcOpticalFlowPyrLK(gray_old_frame, gray_frame, frame_2d_points, None, **lk_params)
+        optical_points, st, err = cv.calcOpticalFlowPyrLK(gray_old_frame, gray_frame, frame_2d_points, None, **lk_params)
         frame_kp, frame_desc, frame_2d_points = test_motion(frame_kp, frame_desc, optical_points, frame_2d_points)
         
-        for k in frame_2d_points:
-            info = [k[0], k[1], i]
-            all_3d_points.append(info)
-
         all_kp = all_kp+frame_kp
         all_dsc = all_dsc+frame_desc
+        all_2d_points = all_2d_points+frame_2d_points
 
+        dsc_len = len(all_dsc)
+        
+        while count_dsc != dsc_len:
+            optical_dsc = gen_optical_dsc(all_2d_points[count_dsc][0], all_2d_points[count_dsc][1], gray_old_frame, gray_frame)
+            all_dsc[count_dsc] = all_dsc[count_dsc]+optical_dsc
+            count_dsc+=1
         print(i)
-      
-    return all_kp, all_dsc, all_3d_points
+    return all_kp, all_dsc
 
 def gen_data_set():
-    listing = os.listdir(r'C:\Users\Arnaldo\Desktop\MoSIFT\dict')
+    listing = os.listdir(r'C:\Users\ADM\Desktop\MoSIFT\dict')
     count_frame = 0
     
     for video in listing:
-        video = r"C:/Users/Arnaldo/Desktop\MoSIFT/dict/"+video
-        all_kp, all_dsc, all_3d_points = gen_mosift_features(video)
-        dfdata_dict = pd.DataFrame(all_3d_points)
+        video = r"C:/Users/ADM/Desktop/MoSIFT/dict/"+video
+        all_kp, all_dsc = gen_mosift_features(video)
+        dfdata_dict = pd.DataFrame(all_dsc)
         dfdata_dict.to_csv('data_dict.csv',mode='a',index=False)
         
-    return 0
