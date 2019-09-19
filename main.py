@@ -6,41 +6,33 @@ from sklearn.manifold import TSNE
 import os
 import matplotlib.pyplot as plt
 
+##e.gen_data_set()
+##carregar dicionário em csv e criar as palavras
+data_dict = pd.read_csv("data_dict.csv", chunksize=2000,low_memory = False)
+data = pd.concat(data_dict, ignore_index=True)
+kmeans = vb.clustering(data, 600)
+print("CLUSTERIZOU")
+##
+train_clapping = vb.gen_train(r"C:/Users/ADM/Desktop/MoSIFT/train/handclapping/",kmeans)
 
-kp1, dsc_v = e.gen_mosift_features(r"C:/Users/ADM/Desktop/MoSIFT/test/violence/005.wmv")
-kp2, dsc_n = e.gen_mosift_features(r"C:/Users/ADM/Desktop/MoSIFT/test/non violence/004.wmv")
+df_train_clapping = pd.DataFrame(train_clapping)
+df_train_clapping.to_csv('train_clapping.csv',mode='a', index=False)
+df_train_clapping = []
+##
+train_boxing = vb.gen_train(r"C:/Users/ADM/Desktop/MoSIFT/train/boxing/",kmeans)
 
-dsc_v_e =TSNE ( n_components = 2, random_state=0) .fit_transform ( dsc_v )
-dsc_n_e = TSNE ( n_components = 2, random_state=0) .fit_transform ( dsc_n )
+df_train_boxing = pd.DataFrame(train_boxing)
+df_train_boxing.to_csv('train_boxing.csv',mode='a', index=False)
+df_train_boxing = []
 
-data = (dsc_v_e, dsc_n_e)
+test_clapping= vb.gen_train(r"C:/Users/ADM/Desktop/MoSIFT/test/handclapping/",kmeans)
+##
+df_test_clapping = pd.DataFrame(test_clapping)
+df_test_clapping.to_csv('test_clapping.csv',mode='a', index=False)
+df_test_clapping = []
+##
+test_boxing = vb.gen_train(r"C:/Users/ADM/Desktop/MoSIFT/test/boxing/",kmeans)
 
-fig = plt.figure()
-ax1 = fig.add_subplot(111)
-
-ax1.scatter([x[0] for x in dsc_v_e], [x[1] for x in dsc_v_e], c='r', label='violence')
-ax1.scatter([x[0] for x in dsc_n_e], [x[1] for x in dsc_n_e], c='b', label='non violence')
-plt.show()    
-
-
-#all_kp, all_dsc = e.gen_mosift_features(r"C:/Users/Arnaldo/Desktop\MoSIFT/dict/009.wmv")
-#dfdata_dict = pd.DataFrame(all_3d_points)
-#dfdata_dict.to_csv('data_dict.csv',mode='a',index=False)
-
-#e.gen_data_set()
-
-#data_dict = pd.read_csv("data_dict.csv")
-
-#dict_embedded = TSNE ( n_components = 2, random_state=0) .fit_transform ( data_dict )
-
-##features_violence = vb.gen_train(r'C:\Users\Arnaldo\Desktop\MoSIFT\train\violence',kmeans,1)
-##features_non_violence = vb.gen_train(r'C:\Users\Arnaldo\Desktop\MoSIFT\train\non violence',kmeans,0)
-
-##train = []
-##train.append(features_violence)
-##train.append(features_non_violence)
-
-##dftrain = pd.DataFrame(train)
-##dftrain.to_csv('train.csv',index=False)
-
-
+df_test_boxing = pd.DataFrame(test_boxing)
+df_test_boxing.to_csv('test_boxing.csv',mode='a', index=False)
+df_test_boxing = []
